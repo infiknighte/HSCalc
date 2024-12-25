@@ -1,6 +1,6 @@
 module Lexer (Lexable (tokenize), Token (..), Operator (..), isOperator) where
 
-import Data.Char (isAlpha, isNumber)
+import Data.Char (isAlpha, isNumber, isSpace)
 
 data Token = Number Double | Operator Operator | OpenParen | CloseParen
   deriving (Show, Eq)
@@ -38,6 +38,14 @@ class Lexable src err tok where
         Right Nothing -> Right $ reverse acc
         Right (Just (token, rest)) -> tokenize' (token : acc) rest
 
+constants :: [String]
+constants = ["PI"]
+
+constantValue :: String -> Double
+constantValue = \case
+  "PI" -> pi
+  _ -> undefined
+
 instance Lexable String String Token where
   nextToken src =
     if null trimmed
@@ -45,19 +53,20 @@ instance Lexable String String Token where
       else case head trimmed of
         '(' -> Right . Just $ (OpenParen, tail trimmed)
         ')' -> Right . Just $ (CloseParen, tail trimmed)
-        c | isOperator c -> Right . Just $ (Operator (read [c]), tail trimmed)
+        c | isOperator c -> Right . Just $ (Operator $ read [c], tail trimmed)
         c
           | isAlpha c ->
               let (str, rest) = makeIdentifier trimmed
-               in if str == "mod"
-                    then Right . Just $ (Operator Modulus, rest)
-                    else Left ("Illegal Token found: '" ++ str ++ "' is undefined")
+               in case str of
+                    "mod" -> Right . Just $ (Operator Modulus, rest)
+                    s | s `elem` constants -> Right . Just $ (Number $ constantValue s, rest)
+                    s -> Left ("Illegal Token found: '" ++ s ++ "' is undefined")
         c
-          | isNumber c ->
+          | isNumber c || c == '.' ->
               let (num, rest) = makeNumber trimmed in Right . Just $ (Number num, rest)
         c -> Left ("Illegal Token found: '" ++ c : "' is undefined")
     where
-      trimmed = dropWhile (`elem` " \t\n\r") src
+      trimmed = dropWhile isSpace src
 
 makeIdentifier :: String -> (String, String)
 makeIdentifier "" = ("", "")
@@ -77,12 +86,23 @@ makeNumber str = (\(x, y) -> (read x, y)) $ makeNumber' [] str False
   where
     makeNumber' :: String -> String -> Bool -> (String, String)
     makeNumber' acc src dots = case src of
-      "" -> (acc, "")
+      "" -> (putZero acc, "")
       c : cs ->
         if c == '.' && dots
           then
-            (acc, src)
+            (putZero acc, src)
           else
             if c `elem` "0123456789."
               then makeNumber' (acc ++ [c]) cs (c == '.')
-              else (acc, src)
+              else (putZero acc, src)
+      where
+        putZero :: String -> String
+        putZero "" = ""
+        putZero s =
+          let s' =
+                if head s == '.'
+                  then '0' : s
+                  else s
+           in if last s' == '.'
+                then s' ++ "0"
+                else s'

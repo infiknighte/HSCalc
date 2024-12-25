@@ -9,15 +9,20 @@ data AST
   deriving (Show)
 
 class Parsable err tok ast where
+  parse :: [tok] -> Either err ast
   expr :: [tok] -> Either err (ast, [tok])
   term :: [tok] -> Either err (ast, [tok])
   power :: [tok] -> Either err (ast, [tok])
   factor :: [tok] -> Either err (ast, [tok])
 
-  parse :: [tok] -> Either err ast
-  parse toks = expr toks >>= Right . fst
-
 instance Parsable String L.Token AST where
+  parse tokens = do
+    (ast, toks) <- expr tokens
+    if null toks
+      then Right ast
+      else 
+        Left "Unexpected tokens after parsing"
+
   expr :: [L.Token] -> Either String (AST, [L.Token])
   expr toks = do
     (lhs, toks') <- term toks
@@ -60,5 +65,5 @@ instance Parsable String L.Token AST where
     L.OpenParen ->
       expr tokens >>= \(ast, tokens') -> case tokens' of
         L.CloseParen : tokens'' -> Right (ast, tokens'')
-        t -> Left $ "expected an closing parenthesis ')', got '" ++ show t ++ "'"
-    _ -> Left $ "Factorizing, expected a number, got '" ++ show token ++ "'"
+        _ -> Left $ "Expected an closing parenthesis ')', got EoF"
+    _ -> Left $ "Expected a number, got '" ++ show token ++ "'"
