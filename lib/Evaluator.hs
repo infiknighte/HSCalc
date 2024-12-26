@@ -25,6 +25,7 @@ instance Evaluatable P.AST String Double where
                 L.Divide -> (/)
                 L.Modulus -> mod'
                 L.Exponent -> (**)
+                _ -> undefined
             )
         _ -> Left "Undefined AST"
         where

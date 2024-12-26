@@ -1,6 +1,7 @@
 module Lexer (Lexable (tokenize), Token (..), Operator (..), isOperator) where
 
 import Data.Char (isAlpha, isNumber, isSpace)
+import Text.Read (readMaybe)
 
 data Token = Number Double | Operator Operator | OpenParen | CloseParen
   deriving (Show, Eq)
@@ -10,8 +11,10 @@ data Operator
   | Subtract
   | Multiply
   | Divide
-  | Exponent
+  | Percent
   | Modulus
+  | SquareRoot
+  | Exponent
   deriving (Show, Eq)
 
 instance Read Operator where
@@ -21,8 +24,9 @@ instance Read Operator where
     "*" -> [(Multiply, "")]
     "/" -> [(Divide, "")]
     "^" -> [(Exponent, "")]
-    "%" -> [(Modulus, "")]
+    "%" -> [(Percent, "")]
     "mod" -> [(Modulus, "")]
+    "sqrt" -> [(SquareRoot, "")]
     _ -> []
 
 isOperator :: Char -> Bool
@@ -57,14 +61,15 @@ instance Lexable String String Token where
         c
           | isAlpha c ->
               let (str, rest) = makeIdentifier trimmed
-               in case str of
-                    "mod" -> Right . Just $ (Operator Modulus, rest)
-                    s | s `elem` constants -> Right . Just $ (Number $ constantValue s, rest)
-                    s -> Left ("Illegal Token found: '" ++ s ++ "' is undefined")
+               in case readMaybe str of
+                    Just opr -> Right . Just $ (Operator opr, rest)
+                    Nothing -> case str of
+                      s | s `elem` constants -> Right . Just $ (Number $ constantValue s, rest)
+                      s -> Left $ "Illegal Token found: '" ++ s ++ "' is undefined"
         c
           | isNumber c || c == '.' ->
               let (num, rest) = makeNumber trimmed in Right . Just $ (Number num, rest)
-        c -> Left ("Illegal Token found: '" ++ c : "' is undefined")
+        c -> Left $ "Illegal Token found: '" ++ c : "' is undefined"
     where
       trimmed = dropWhile isSpace src
 
