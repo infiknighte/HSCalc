@@ -24,10 +24,10 @@ repl = repl' 0
               repl' ans
             _ -> case hsCalc input' of
               Left err -> do
-                putStrLn err
+                print err
                 repl' 0
               Right result -> do
-                putStrLn $ show result
+                print result
                 repl' result
 
 replaceAll :: String -> String -> String -> String

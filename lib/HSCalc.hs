@@ -1,9 +1,16 @@
 module HSCalc (hsCalc) where
 
-import Evaluator (Evaluatable (evaluate))
-import Lexer (Lexable (tokenize), Token (..))
-import Parser (AST, Parsable (parse))
+import Data.Bifunctor (Bifunctor (first))
+import Evaluator (EvaluateError, evaluate)
+import Lexer (LexicalError, tokenize)
+import Parser (ParseError, parse)
 
-hsCalc :: String -> Either String Double
-hsCalc input = (tokenize input :: Either String [Token]) >>= \tokens -> (parse tokens :: Either String AST) >>= \ast -> evaluate ast
+data CalcError = Lexer LexicalError | Parser ParseError | Evaluate EvaluateError
+  deriving (Show)
 
+hsCalc :: String -> Either CalcError Double
+hsCalc input =
+  first Lexer (tokenize input)
+    >>= \tokens ->
+      first Parser (parse tokens)
+        >>= \ast -> first Evaluate (evaluate ast)

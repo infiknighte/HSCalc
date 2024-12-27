@@ -1,5 +1,6 @@
-module Lexer (Lexable (tokenize), Token (..), Operator (..), isOperator) where
+module Lexer (tokenize, Token (..), Operator (..), LexicalError (..), isOperator) where
 
+import Data.Bifunctor as BF (first)
 import Data.Char (isAlpha, isNumber, isSpace)
 import Text.Read (readMaybe)
 
@@ -32,15 +33,13 @@ instance Read Operator where
 isOperator :: Char -> Bool
 isOperator c = c `elem` "+-*/^%"
 
-class Lexable src err tok where
-  nextToken :: src -> Either err (Maybe (tok, src))
-  tokenize :: src -> Either err [tok]
-  tokenize = tokenize' []
-    where
-      tokenize' acc src = case nextToken src of
-        Left err -> Left err
-        Right Nothing -> Right $ reverse acc
-        Right (Just (token, rest)) -> tokenize' (token : acc) rest
+tokenize :: String -> Either LexicalError [Token]
+tokenize = tokenize' []
+  where
+    tokenize' acc src = case nextToken src of
+      Left err -> Left err
+      Right Nothing -> Right $ reverse acc
+      Right (Just (token, rest)) -> tokenize' (token : acc) rest
 
 constants :: [String]
 constants = ["PI"]
@@ -50,28 +49,31 @@ constantValue = \case
   "PI" -> pi
   _ -> undefined
 
-instance Lexable String String Token where
-  nextToken src =
-    if null trimmed
-      then Right Nothing
-      else case head trimmed of
-        '(' -> Right . Just $ (OpenParen, tail trimmed)
-        ')' -> Right . Just $ (CloseParen, tail trimmed)
-        c | isOperator c -> Right . Just $ (Operator $ read [c], tail trimmed)
-        c
-          | isAlpha c ->
-              let (str, rest) = makeIdentifier trimmed
-               in case readMaybe str of
-                    Just opr -> Right . Just $ (Operator opr, rest)
-                    Nothing -> case str of
-                      s | s `elem` constants -> Right . Just $ (Number $ constantValue s, rest)
-                      s -> Left $ "Illegal Token found: '" ++ s ++ "' is undefined"
-        c
-          | isNumber c || c == '.' ->
-              let (num, rest) = makeNumber trimmed in Right . Just $ (Number num, rest)
-        c -> Left $ "Illegal Token found: '" ++ c : "' is undefined"
-    where
-      trimmed = dropWhile isSpace src
+data LexicalError = UndefinedCharacter Char | UndefinedIdentifier String
+  deriving (Show)
+
+nextToken :: String -> Either LexicalError (Maybe (Token, String))
+nextToken src =
+  if null trimmed
+    then Right Nothing
+    else case head trimmed of
+      '(' -> Right . Just $ (OpenParen, tail trimmed)
+      ')' -> Right . Just $ (CloseParen, tail trimmed)
+      c | isOperator c -> Right . Just $ (Operator $ read [c], tail trimmed)
+      c
+        | isAlpha c ->
+            let (str, rest) = makeIdentifier trimmed
+             in case readMaybe str of
+                  Just opr -> Right . Just $ (Operator opr, rest)
+                  Nothing -> case str of
+                    s | s `elem` constants -> Right . Just $ (Number $ constantValue s, rest)
+                    s -> Left $ UndefinedIdentifier s
+      c
+        | isNumber c || c == '.' ->
+            let (num, rest) = makeNumber trimmed in Right . Just $ (Number num, rest)
+      c -> Left $ UndefinedCharacter c
+  where
+    trimmed = dropWhile isSpace src
 
 makeIdentifier :: String -> (String, String)
 makeIdentifier "" = ("", "")
@@ -87,7 +89,7 @@ makeIdentifier str = makeIdentifier' [] str
 
 makeNumber :: String -> (Double, String)
 makeNumber "" = (0, "")
-makeNumber str = (\(x, y) -> (read x, y)) $ makeNumber' [] str False
+makeNumber str = BF.first read $ makeNumber' [] str False
   where
     makeNumber' :: String -> String -> Bool -> (String, String)
     makeNumber' acc src dots = case src of
