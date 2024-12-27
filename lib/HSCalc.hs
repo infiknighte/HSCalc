@@ -1,4 +1,4 @@
-module HSCalc (hsCalc, prettyString) where
+module HSCalc (hsCalc, prettyString, CalcError (..)) where
 
 import Data.Bifunctor (Bifunctor (first))
 import Evaluator (EvaluateError (..), evaluate)
