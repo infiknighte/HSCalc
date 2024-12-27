@@ -9,9 +9,9 @@ data AST
   deriving (Show)
 
 data ParseError
-  = InvalidSyntaxEoF
-  | ExpectedNumberGotEoF
+  = ExpectedNumberGotEoF
   | ExpectedClosingParenGotEoF
+  | InvalidSyntaxGot L.Token
   | ExpectedNumberGot L.Token
   | ExpectedClosingParenGot L.Token
   deriving (Show)
@@ -21,7 +21,7 @@ parse tokens =
   expr tokens >>= \(ast, toks) ->
     if null toks
       then Right ast
-      else Left InvalidSyntaxEoF
+      else Left . InvalidSyntaxGot $ head toks
 
 expr :: [L.Token] -> Either ParseError (AST, [L.Token])
 expr = binOp term (`elem` [L.Add, L.Subtract])

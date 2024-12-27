@@ -49,7 +49,7 @@ constantValue = \case
   "PI" -> pi
   _ -> undefined
 
-data LexicalError = UndefinedCharacter Char | UndefinedIdentifier String
+data LexicalError = UndefinedChar Char | UndefinedIdent String
   deriving (Show)
 
 nextToken :: String -> Either LexicalError (Maybe (Token, String))
@@ -67,11 +67,11 @@ nextToken src =
                   Just opr -> Right . Just $ (Operator opr, rest)
                   Nothing -> case str of
                     s | s `elem` constants -> Right . Just $ (Number $ constantValue s, rest)
-                    s -> Left $ UndefinedIdentifier s
+                    s -> Left $ UndefinedIdent s
       c
         | isNumber c || c == '.' ->
             let (num, rest) = makeNumber trimmed in Right . Just $ (Number num, rest)
-      c -> Left $ UndefinedCharacter c
+      c -> Left $ UndefinedChar c
   where
     trimmed = dropWhile isSpace src
 

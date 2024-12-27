@@ -2,8 +2,8 @@ module Main where
 
 import Data.Char (isSpace)
 import Data.List (dropWhileEnd, isPrefixOf)
-import HSCalc (hsCalc)
-import System.IO qualified as SysIO (hFlush, stdout)
+import HSCalc (hsCalc, prettyString)
+import System.IO qualified as Sys.IO (hFlush, stdout)
 
 main :: IO ()
 main = repl
@@ -14,7 +14,7 @@ repl = repl' 0
     repl' :: Double -> IO ()
     repl' ans = do
       putStr "> "
-      SysIO.hFlush SysIO.stdout
+      Sys.IO.hFlush Sys.IO.stdout
       input <- getLine
       let input' = replaceAll "@" (show ans) (dropWhileEnd isSpace $ dropWhile isSpace input)
        in case input' of
@@ -24,7 +24,7 @@ repl = repl' 0
               repl' ans
             _ -> case hsCalc input' of
               Left err -> do
-                print err
+                putStrLn $ prettyString err
                 repl' 0
               Right result -> do
                 print result

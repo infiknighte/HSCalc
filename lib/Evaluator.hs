@@ -1,4 +1,4 @@
-module Evaluator (evaluate, EvaluateError) where
+module Evaluator (evaluate, EvaluateError (..)) where
 
 import Data.Fixed (mod')
 import Lexer qualified as L (Operator (..))
