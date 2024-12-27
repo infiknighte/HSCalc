@@ -26,7 +26,7 @@ parse tokens =
 expr :: [L.Token] -> Either ParseError (AST, [L.Token])
 expr = binOp term (`elem` [L.Add, L.Subtract])
   where
-    term = binOp power (`elem` [L.Multiply, L.Divide])
+    term = binOp power (`elem` [L.Multiply, L.Divide, L.Modulus])
       where
         power = binOp factor (== L.Exponent)
 
